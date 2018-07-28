@@ -153,9 +153,44 @@ class Model():
     def word2idx(self, word):
         return self.model[self.sg].wv.vocab[word].index
 
-    def find_collocation(self, word, lim=10000):
-        return self.model[self.sg].similar_by_vector(self.model[self.sg].syn1neg[self.word2idx(word)], topn=20, restrict_vocab=lim)
+    def find_my_collocation(self, word, lim=10000, topn=20):
+        if self.sg == 1:
+            b = self.model[self.sg][word]
+            a = self.model[self.sg].wv.syn0[:lim,:]
+            sim_array = np.matmul(a, b) / (np.linalg.norm(a, axis=1) * np.linalg.norm(b))
+            order = np.argsort(-sim_array)[:topn]
+            ans = []
+            for i in order:
+                ans.append((self.model[self.sg].wv.index2word[i], sim_array[i]))
+            return ans
+        else:
+            return self.model[self.sg].similar_by_vector(self.model[self.sg].syn1neg[self.word2idx(word)], topn=topn, restrict_vocab=lim)
 
+    def find_whose_collocation_is_me(self, word, lim=10000, topn=20):
+        if self.sg == 1:
+            return self.model[self.sg].similar_by_vector(self.model[self.sg].syn1neg[self.word2idx(word)], topn=topn, restrict_vocab=lim)
+        else:
+            b = self.model[self.sg][word]
+            a = self.model[self.sg].syn1neg[:lim,:]
+            sim_array = np.matmul(a, b) / (np.linalg.norm(a, axis=1) * np.linalg.norm(b))
+            order = np.argsort(-sim_array)[:topn]
+            ans = []
+            for i in order:
+                ans.append((self.model[self.sg].wv.index2word[i], sim_array[i]))
+            return ans
+
+    def test_collocation(self, w1, w2):  #examine if w2 is w1's collocation word
+        v1 = None
+        v2 = None
+        if self.sg:
+            v2 = self.model[self.sg].syn1neg[self.word2idx(w2)]
+            v1 = self.model[self.sg][w1]
+        else:
+            v1 = self.model[self.sg].syn1neg[self.word2idx(w1)]
+            v2 = self.model[self.sg][w2]
+
+        return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+    
     def context_prob(self, w1, w2):
         res = 0
         try:
@@ -238,26 +273,19 @@ class Model():
         plot_confusion_matrix(
             mat, q_list, target, title='Dependency Analysis', sg=self.sg, sv=sv)
 
-    def draw_dependency(self):
-        g = dg.nx_graph()
-        g.info()
-        pos = networkx.spring_layout(g, dim=1)
-        networkx.draw_networkx_nodes(g, pos, node_size=50)
-        # networkx.draw_networkx_edges(g, pos, edge_color='k', width=8)
-        networkx.draw_networkx_labels(g, pos, dg.nx_labels)
-        pylab.xticks([])
-        pylab.yticks([])
-        pylab.savefig('tree.png')
-        pylab.show()
+    # def draw_dependency(self):
+    #     g = dg.nx_graph()
+    #     g.info()
+    #     pos = networkx.spring_layout(g, dim=1)
+    #     networkx.draw_networkx_nodes(g, pos, node_size=50)
+    #     # networkx.draw_networkx_edges(g, pos, edge_color='k', width=8)
+    #     networkx.draw_networkx_labels(g, pos, dg.nx_labels)
+    #     pylab.xticks([])
+    #     pylab.yticks([])
+    #     pylab.savefig('tree.png')
+    #     pylab.show()
 
     def demo(self):
-        # print("* ======== Welcome to Depandency Analysis Machine ======== *")
-        # print("提供 4 種測試模式\n")
-        # print("輸入一個詞，則去尋找前20個該詞的相似詞 & 鄰近詞")
-        # # print("輸入一個詞+，則去尋找前20個該詞的鄰近詞")
-        # print("輸入兩個詞，則去計算兩個詞的餘弦相似度")
-        # print("輸入三個詞，進行類比推理")
-        # print("輸入四個以上的詞，進行文字匹配\n")
         print(add_frame(self.art))
         while True:
             print('sent> ', end='')
@@ -269,6 +297,7 @@ class Model():
                     if q_list[0] == '':
                         continue
                     if q_list[0] == 'exit':
+                        del self.model
                         break
                     if q_list[0] == 'sg':
                         self.sg = 1
@@ -276,51 +305,35 @@ class Model():
                     if q_list[0] == 'cbow':
                         self.sg = 0
                         continue
-                    col = self.find_collocation(q_list[0])
-                    print(comp("相似詞前 20 排序", 30)+"鄰近詞前 20 排序")
+                    col = self.find_my_collocation(q_list[0])
+                    who = self.find_whose_collocation_is_me(q_list[0])
+                    print(comp("相似詞前 20 排序", 30)+comp("鄰近詞前 20 排序", 30)+comp("誰的鄰近詞是我？前 20 排序", 30))
                     res = self.model[self.sg].most_similar(q_list[0], topn=20)
-                    for item, con in zip(res, col):
+                    for item, con, man in zip(res, col, who):
                         print(comp(item[0]+","+str(item[1]), 30) +
-                              '\t'+con[0] + "," + str(con[1]))
+                              comp(con[0] + "," + str(40*con[1]), 30) +
+                              comp(man[0] + "," + str(40*man[1]), 30))
 
                 elif len(q_list) == 2:
-                    print("計算 Cosine 相似度")
+                    print(comp("計算 Cosine 相似度", 30)+comp("B是A的鄰近詞信心值", 30)+comp("A是B的鄰近詞信心值", 30))
                     res = self.model[self.sg].similarity(q_list[0], q_list[1])
-                    print(res)
+                    res1 = self.test_collocation(q_list[0], q_list[1])
+                    res2 = self.test_collocation(q_list[1], q_list[0])
+                    print(comp(str(res), 30) +
+                          comp(str(40*res1), 30) +
+                          comp(str(40*res2), 30))
+
                 elif len(q_list) == 3:
                     print("%s to %s == %s to ?" %
                           (q_list[0], q_list[1], q_list[2]))
                     w1 = self.model[self.sg][q_list[0]]
-                    w2 = self.model[self.sg][q_list[1]]
+                    w2 = self.model[self.sg][q_list[1]]#positive=[w2, w3], negative=[w1]
                     w3 = self.model[self.sg][q_list[2]]
-                    res = self.model[self.sg].similar_by_vector((w2 - w1) + w3, topn=20)
-                    # print("%s之於%s，如%s之於" % (q_list[0],q_list[2],q_list[1]))
-                    # res = model.most_similar([q_list[0],q_list[1]], [q_list[2]], topn= 20)
+                    res = self.model[self.sg].most_similar(positive=[q_list[1], q_list[2]], negative=[q_list[0]], topn=20)
                     for item in res:
                         print(item[0] + "," + str(item[1]))
                 else:
-                    mat = self.sent_sim(q_list)
-                    target = np.zeros((len(q_list), len(q_list)))
-                    w = 11
-                    print(' '*w, end='')
-                    for i in range(len(q_list)):
-                        print(comp(q_list[i], w), end='')
-                    print('')
-                    for i in range(len(q_list)):
-                        print(comp(q_list[i], w), end='')
-                        rank = np.argsort(-mat[i])
-						#np.concatenate((np.zeros((i,)), np.argsort(-mat[i][i:])))#
-                        top = rank[0] if rank[0] != i else rank[1]
-                        for x in range(len(mat[i])):
-                            boo = int(x == top)
-                            txt = '[' * boo + \
-                                str(round(mat[i][x], 5)) + ']' * boo
-                            if boo:
-                                target[i][x] = 1
-                            print(comp(txt, w), end='')
-                        print('')
-                    plot_confusion_matrix(
-                        mat, q_list, target, title='Dependency Analysis', sg=self.sg, sv=self.save_fig)
+                    self.dependency_analysis(q_list, sv=0)
                 print("----------------------------")
             except Exception as e:
                 print(repr(e))
