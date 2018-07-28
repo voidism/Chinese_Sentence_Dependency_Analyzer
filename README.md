@@ -1,7 +1,7 @@
 Chinese Sentence Dependency Analyser
 ===
 Welcome to Dependency Analysis Machine
-#### Four input operation mode:
+## Four input operation mode:
 * Input one word, find the top 20 most similar words & collocation words.
 ```bash
 # first column-> similar words
@@ -88,6 +88,11 @@ output figure:
 
 _Input "exit" to leave._                                                
 _Input "sg" or "cbow" to switch between the CBOW and Skip-gram model._  
+
+## Requirements
+- gensim==3.4.0
+- matplotlib
+- numpy
 
 *************************************************************************
 Author: Yung-Sung Chuang 2018/07/27 @ IIS  Academia Sinica           

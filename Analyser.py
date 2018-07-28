@@ -136,9 +136,6 @@ def load_cna():
 
 
 
-
-
-
 class Model():
     def __init__(self):
         logging.basicConfig(
@@ -149,7 +146,14 @@ class Model():
         self.art = ''
         self.load_art()
         self.save_fig = False
-    
+        self.texfile = open('dependency.tex', 'w', encoding='utf8')
+        self.begin_tex()
+        
+    def __del__(self):
+        self.texfile.write(r"\end{CJK*}")
+        self.texfile.write(r"\end{document}")
+        self.texfile.close()
+
     def word2idx(self, word):
         return self.model[self.sg].wv.vocab[word].index
 
@@ -224,8 +228,8 @@ class Model():
         return target
 
 
-    def run_DA(self):
-        li = load_cna()
+    def run_DA(self,big=0,lim=50):
+        li = load_cna()[big:lim]
         ct = Clock(len(li),5,'DA')
         log = []
         for i in li:
@@ -234,16 +238,20 @@ class Model():
             cm = self.sent_sim(i)
             temp_dict1['graph'] = cm.tolist()
             temp_dict1['sg'] = self.sg
-            # tag = self.tag_mat(cm)
+            tag = self.tag_mat(cm)
             log.append(temp_dict1)
+            self.texfile.write('\\textbf{CBOW} \\\\ \n')
+            self.write_tex(i,tag,cm)
             # plot_confusion_matrix(cm, i, tag, sv=True, sg=self.sg)
             temp_dict2 = {'sentence':''.join(i)}
             self.sg = 1
             cm = self.sent_sim(i)
             temp_dict2['graph'] = cm.tolist()
             temp_dict2['sg'] = self.sg
-            # tag = self.tag_mat(cm)
+            tag = self.tag_mat(cm)
             log.append(temp_dict2)
+            self.texfile.write('\\textbf{Skip-gram} \\\\ \n')
+            self.write_tex(i,tag,cm)
             # plot_confusion_matrix(cm, i, tag, sv=True, sg=self.sg)
             ct.flush()
         with open('log.json', 'w') as fp:
@@ -272,7 +280,7 @@ class Model():
             print('')
         plot_confusion_matrix(
             mat, q_list, target, title='Dependency Analysis', sg=self.sg, sv=sv)
-
+        self.write_tex(q_list,target,mat)
     # def draw_dependency(self):
     #     g = dg.nx_graph()
     #     g.info()
@@ -326,9 +334,9 @@ class Model():
                 elif len(q_list) == 3:
                     print("%s to %s == %s to ?" %
                           (q_list[0], q_list[1], q_list[2]))
-                    w1 = self.model[self.sg][q_list[0]]
-                    w2 = self.model[self.sg][q_list[1]]#positive=[w2, w3], negative=[w1]
-                    w3 = self.model[self.sg][q_list[2]]
+                    # w1 = self.model[self.sg][q_list[0]]
+                    # w2 = self.model[self.sg][q_list[1]]#positive=[w2, w3], negative=[w1]
+                    # w3 = self.model[self.sg][q_list[2]]
                     res = self.model[self.sg].most_similar(positive=[q_list[1], q_list[2]], negative=[q_list[0]], topn=20)
                     for item in res:
                         print(item[0] + "," + str(item[1]))
@@ -400,7 +408,32 @@ Input four words, analysis the dependency matching.
 Input "exit" to leave.
 Input "sg" or "cbow" to switch between the CBOW and Skip-gram model.
 
-Author: Yung-Sung Chuang 2018/07/27 @ IIS  Academia Sinica'''
+Author: Yung - Sung Chuang 2018 / 0 7 / 27 @ IIS Academia Sinica '''
+
+    def begin_tex(self):
+        begin = r'''\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{CJKutf8}
+\usepackage{tikz-dependency}
+%\usepackage[left=0.5in, right=0.5in, bottom=0.5in, top=0.5in]{geometry}
+\begin{document}
+\begin{CJK*}{UTF8}{bsmi}'''
+        self.texfile.write(begin)
+        self.texfile.write('\n')
+
+    def write_tex(self, sent, tag_mat, score_mat):
+        self.texfile.write(r"""\begin{dependency}
+    \begin{deptext}[column sep=1.2e m] """)
+        self.texfile.write('\n        ')
+        self.texfile.write(r' \& '.join(sent) + r' \\')
+        self.texfile.write('\n    \\end{deptext}\n')
+        # self.texfile.write('    \\deproot{4}{root}\n')
+        for i in range(tag_mat.shape[0]):
+            for j in range(tag_mat.shape[1]):
+                if tag_mat[i,j] == 1:
+                    self.texfile.write("        \\depedge{%d}{%d}{%s}\n"%(i+1,j+1,str(round(score_mat[i,j],4))))#str(i)+"-"+str(j)
+        self.texfile.write("\\end{dependency}\n\n")
+
 
 
 if __name__ == "__main__":
