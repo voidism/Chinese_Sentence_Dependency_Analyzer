@@ -7,8 +7,8 @@ Welcome to Dependency Analysis Machine
 * Input three words, make analogical reasoning.
 * Input four words, analysis the dependency matching.
 
-*Input "exit" to leave.                                                 
-*Input "sg" or "cbow" to switch between the CBOW and Skip-gram model.   
+_Input "exit" to leave._                                                
+_Input "sg" or "cbow" to switch between the CBOW and Skip-gram model._  
 
 *************************************************************************
 Author: Yung-Sung Chuang 2018/07/27 @ IIS  Academia Sinica           
