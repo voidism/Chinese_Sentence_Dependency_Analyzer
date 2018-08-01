@@ -1,6 +1,25 @@
 Chinese Sentence Dependency Analyser
 ===
 Welcome to Dependency Analysis Machine
+
+
+## Requirements
+
+- gensim==3.4.0
+- matplotlib
+- numpy
+
+## Execute Program
+
+```python 
+python3 Analyser.py
+or
+python3
+>>> from Analyser import *
+>>> d = Model()
+>>> d.demo()
+```
+
 ## Four input operation mode:
 * Input one word, find the top 20 most similar words & collocation words.
 ```bash
@@ -33,7 +52,9 @@ sent> 漂亮
 討喜,0.6300048232078552       美女,0.33281199634075165      頗為,0.38449157029390335
 ----------------------------
 ```
+
 * Input two words, compute the cosine similarity of them.
+
 ```bash
 # first column-> cosine similarity of word_1 and word_2
 # second column-> P(word_2|word_1) after scale
@@ -45,7 +66,9 @@ sent> 緊急 救護
 0.5115128391230042            0.9036871790885925            0.625317320227623
 ----------------------------
 ```
+
 * Input three words, make analogical reasoning.
+
 ```bash
 # example
 sent> 車 飛機 輛
@@ -83,16 +106,18 @@ sent> 中央 研究院 資訊 科學 研究所
 研究所     0.00681    0.00708    0.00517    [0.01725]  0.01266
 ----------------------------
 ```
-output figure:  
+
+## output figure:  
 ![output_figure](https://i.imgur.com/Y8xdsmX.jpg)
 
-_Input "exit" to leave._                                                
+## output latex: 
+Also, it will output tex file to _dependency.tex_, you can use it to output pdf file:  
+
+![latex](https://i.imgur.com/CpUQUQN.png)
+
+_Input "exit" to leave._  
 _Input "sg" or "cbow" to switch between the CBOW and Skip-gram model._  
 
-## Requirements
-- gensim==3.4.0
-- matplotlib
-- numpy
 
 *************************************************************************
 Author: Yung-Sung Chuang 2018/07/27 @ IIS  Academia Sinica           

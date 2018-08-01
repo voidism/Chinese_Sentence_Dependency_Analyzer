@@ -8,14 +8,16 @@ import numpy as np
 
 import itertools
 import numpy as np
+import matplotlib as mpl
+# mpl.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as mfm
 import os
 import sys
 from jexus import Clock
 import pickle
-import networkx
-from matplotlib import pylab
+# import networkx
+# from matplotlib import pylab
 
 def add_frame(art):
     lines=[]
@@ -151,8 +153,11 @@ class Model():
         
     def __del__(self):
         self.texfile.write(r"\end{CJK*}")
+        self.texfile.write('\n')
         self.texfile.write(r"\end{document}")
         self.texfile.close()
+
+        # self.show_pic = True
 
     def word2idx(self, word):
         return self.model[self.sg].wv.vocab[word].index
@@ -160,7 +165,7 @@ class Model():
     def find_my_collocation(self, word, lim=10000, topn=20):
         if self.sg == 1:
             b = self.model[self.sg][word]
-            a = self.model[self.sg].wv.syn0[:lim,:]
+            a = self.model[self.sg].syn1neg[:lim,:]
             sim_array = np.matmul(a, b) / (np.linalg.norm(a, axis=1) * np.linalg.norm(b))
             order = np.argsort(-sim_array)[:topn]
             ans = []
@@ -186,14 +191,19 @@ class Model():
     def test_collocation(self, w1, w2):  #examine if w2 is w1's collocation word
         v1 = None
         v2 = None
-        if self.sg:
-            v2 = self.model[self.sg].syn1neg[self.word2idx(w2)]
-            v1 = self.model[self.sg][w1]
-        else:
-            v1 = self.model[self.sg].syn1neg[self.word2idx(w1)]
-            v2 = self.model[self.sg][w2]
+        res = -1
+        try:
+            if self.sg:
+                v2 = self.model[self.sg].syn1neg[self.word2idx(w2)]
+                v1 = self.model[self.sg][w1]
+            else:
+                v1 = self.model[self.sg].syn1neg[self.word2idx(w1)]
+                v2 = self.model[self.sg][w2]
+            res = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        except:
+            pass
 
-        return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        return res
     
     def context_prob(self, w1, w2):
         res = 0
@@ -211,17 +221,17 @@ class Model():
         mat = np.zeros((ln, ln))
         for i in range(len(sent)):
             for j in range(len(sent)):
-                mat[i, j] = self.context_prob(sent[i], sent[j])
+                mat[i, j] = self.test_collocation(sent[i], sent[j])
         return mat
 
     def tag_mat(self, mat):
         target = np.zeros_like(mat)
         if mat.shape[0] == 1:
             return target
-        for i in range(len(mat)):
+        for i in range(mat.shape[0]):
             rank = np.argsort(-mat[i])
             top = rank[0] if rank[0] != i else rank[1]
-            for x in range(len(mat[i])):
+            for x in range(mat.shape[1]):
                 boo = int(x == top)
                 if boo:
                     target[i][x] = 1
@@ -281,17 +291,7 @@ class Model():
         plot_confusion_matrix(
             mat, q_list, target, title='Dependency Analysis', sg=self.sg, sv=sv)
         self.write_tex(q_list,target,mat)
-    # def draw_dependency(self):
-    #     g = dg.nx_graph()
-    #     g.info()
-    #     pos = networkx.spring_layout(g, dim=1)
-    #     networkx.draw_networkx_nodes(g, pos, node_size=50)
-    #     # networkx.draw_networkx_edges(g, pos, edge_color='k', width=8)
-    #     networkx.draw_networkx_labels(g, pos, dg.nx_labels)
-    #     pylab.xticks([])
-    #     pylab.yticks([])
-    #     pylab.savefig('tree.png')
-    #     pylab.show()
+
 
     def demo(self):
         print(add_frame(self.art))
@@ -315,21 +315,21 @@ class Model():
                         continue
                     col = self.find_my_collocation(q_list[0])
                     who = self.find_whose_collocation_is_me(q_list[0])
-                    print(comp("相似詞前 20 排序", 30)+comp("鄰近詞前 20 排序", 30)+comp("誰的鄰近詞是我？前 20 排序", 30))
+                    print(comp("相似詞前 20 排序", 30)+comp("搭配詞前 20 排序", 30)+comp("誰的搭配詞是我？前 20 排序", 30))
                     res = self.model[self.sg].most_similar(q_list[0], topn=20)
                     for item, con, man in zip(res, col, who):
                         print(comp(item[0]+","+str(item[1]), 30) +
-                              comp(con[0] + "," + str(40*con[1]), 30) +
-                              comp(man[0] + "," + str(40*man[1]), 30))
+                              comp(con[0] + "," + str(20*con[1] if self.sg else 40*con[1]), 30) +
+                              comp(man[0] + "," + str(20*man[1] if self.sg else 40*man[1]), 30))
 
                 elif len(q_list) == 2:
-                    print(comp("計算 Cosine 相似度", 30)+comp("B是A的鄰近詞信心值", 30)+comp("A是B的鄰近詞信心值", 30))
+                    print(comp("計算 Cosine 相似度", 30)+comp("B是A的搭配詞信心值", 30)+comp("A是B的搭配詞信心值", 30))
                     res = self.model[self.sg].similarity(q_list[0], q_list[1])
                     res1 = self.test_collocation(q_list[0], q_list[1])
                     res2 = self.test_collocation(q_list[1], q_list[0])
                     print(comp(str(res), 30) +
-                          comp(str(40*res1), 30) +
-                          comp(str(40*res2), 30))
+                          comp(str(20*res1 if self.sg else 40*res1), 30) +
+                          comp(str(20*res2 if self.sg else 40*res2), 30))
 
                 elif len(q_list) == 3:
                     print("%s to %s == %s to ?" %
@@ -347,56 +347,6 @@ class Model():
                 print(repr(e))
                 print("----------------------------")
 
-    # def plot_confusion_matrix(self, cm, classes, target_mat,
-    #                       normalize=False,
-    #                       title='Confusion matrix',
-    #                       cmap="Blues"):
-    #     """
-    #     This function prints and plots the confusion matrix.
-    #     Normalization can be applied by setting `normalize=True`.
-    #     """
-    #     if normalize:
-    #         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    #         print("Normalized confusion matrix")
-    #     else:
-    #         print('Confusion matrix, without normalization')
-
-    #     # print(cm)
-
-    #     font_path = './bkai00mp.ttf'
-    #     prop = mfm.FontProperties(fname=font_path)
-    #     plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    #     plt.title(title)
-    #     plt.colorbar()
-    #     tick_marks = np.arange(len(classes))
-    #     plt.xticks(tick_marks, classes, rotation=45,
-    #             fontproperties=prop)
-    #     plt.yticks(tick_marks, classes,
-    #             fontproperties=prop)
-
-    #     fmt = '.4f'
-    #     thresh = cm.max() / 2.
-    #     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-    #         cor = "white" if cm[i, j] > thresh else "black"
-    #         if target_mat[i][j] == 1:
-    #             cor = 'red'
-    #         elif i == j:
-    #             cor = 'green'
-    #         plt.text(j, i, format(cm[i, j], fmt),
-    #                 horizontalalignment="center", fontsize=7,
-    #                 color=cor)
-
-    #     plt.tight_layout()
-    #     plt.ylabel('Center word')
-    #     plt.xlabel('Context word')
-    #     if self.save_fig:
-    #         emb = 'skip_gram' if self.sg else 'CBOW'
-    #         if not os.path.exists('./dependency_graphs'):
-    #             os.makedirs('./dependency_graphs')
-    #         plt.savefig('./dependency_graphs/{}_{}.png'.format(''.join(classes), emb))
-    #     else:
-    #         plt.show()
-
     def load_art(self):
         self.art = ''' ============ Welcome to Dependency Analysis Machine ============ 
 
@@ -408,14 +358,14 @@ Input four words, analysis the dependency matching.
 Input "exit" to leave.
 Input "sg" or "cbow" to switch between the CBOW and Skip-gram model.
 
-Author: Yung - Sung Chuang 2018 / 0 7 / 27 @ IIS Academia Sinica '''
+Author: Yung - Sung Chuang 2018 / 07 / 27 @ IIS Academia Sinica '''
 
     def begin_tex(self):
         begin = r'''\documentclass{article}
 \usepackage[utf8]{inputenc}
 \usepackage{CJKutf8}
 \usepackage{tikz-dependency}
-%\usepackage[left=0.5in, right=0.5in, bottom=0.5in, top=0.5in]{geometry}
+\usepackage[left=0.5in, right=0.5in, bottom=0.5in, top=0.5in]{geometry}
 \begin{document}
 \begin{CJK*}{UTF8}{bsmi}'''
         self.texfile.write(begin)
