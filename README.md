@@ -120,6 +120,11 @@ Also, it will output tex file to _dependency.tex_, you can use it to output pdf 
 _Input "exit" to leave._  
 _Input "sg" or "cbow" to switch between the CBOW and Skip-gram model._  
 
+## Training data (about 10G)
+- 中央研究院平衡語料庫
+- Yahoo News
+- CNA News (main)
+
 
 *************************************************************************
 Author: Yung-Sung Chuang 2018/07/27 @ IIS  Academia Sinica           
