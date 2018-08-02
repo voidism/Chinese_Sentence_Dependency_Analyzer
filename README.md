@@ -5,6 +5,7 @@ Welcome to Dependency Analysis Machine!
 
 ## Requirements
 
+- Python3
 - gensim==3.4.0
 - matplotlib
 - numpy
