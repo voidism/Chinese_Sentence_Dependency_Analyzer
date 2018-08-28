@@ -9,7 +9,7 @@ Welcome to Dependency Analysis Machine!
 - gensim==3.4.0
 - matplotlib
 - numpy
-- Download the word2vec models to this folder: https://goo.gl/MeChvA
+- Download the word2vec models to this folder: [Download Link](https://goo.gl/MeChvA)
 
 ## Execute the Program
 
