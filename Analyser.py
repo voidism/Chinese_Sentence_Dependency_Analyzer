@@ -9,7 +9,7 @@ import numpy as np
 import itertools
 import numpy as np
 import matplotlib as mpl
-# mpl.use('Agg')
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as mfm
 import os
@@ -157,7 +157,15 @@ class Model():
         self.texfile.write(r"\end{document}")
         self.texfile.close()
 
-        # self.show_pic = True
+    def online_training(self, filename="MLcorpus.txt"):
+        logging.basicConfig(
+            format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+        for sg, modelname in zip([0,1], ['CBOW/word2vec.model', 'skip-gram/word2vec.model']):
+            # model = models.Word2Vec.load(modelname)
+            sentences2 = models.word2vec.LineSentence(filename)
+            self.model[sg].build_vocab(sentences2, update=True)
+            self.model[sg].train(sentences2, total_examples=sum(1 for line in open(filename)), epochs=self.model[sg].epochs)
+            self.model[sg].save(modelname)
 
     def word2idx(self, word):
         return self.model[self.sg].wv.vocab[word].index
@@ -165,7 +173,7 @@ class Model():
     def find_my_collocation(self, word, lim=10000, topn=20):
         if self.sg == 1:
             b = self.model[self.sg][word]
-            a = self.model[self.sg].syn1neg[:lim,:]
+            a = self.model[self.sg].wv.syn0[:lim,:]
             sim_array = np.matmul(a, b) / (np.linalg.norm(a, axis=1) * np.linalg.norm(b))
             order = np.argsort(-sim_array)[:topn]
             ans = []
@@ -315,21 +323,21 @@ class Model():
                         continue
                     col = self.find_my_collocation(q_list[0])
                     who = self.find_whose_collocation_is_me(q_list[0])
-                    print(comp("相似詞前 20 排序", 30)+comp("搭配詞前 20 排序", 30)+comp("誰的搭配詞是我？前 20 排序", 30))
+                    print(comp("相似詞前 20 排序", 30)+comp("鄰近詞前 20 排序", 30)+comp("誰的鄰近詞是我？前 20 排序", 30))
                     res = self.model[self.sg].most_similar(q_list[0], topn=20)
                     for item, con, man in zip(res, col, who):
                         print(comp(item[0]+","+str(item[1]), 30) +
-                              comp(con[0] + "," + str(20*con[1] if self.sg else 40*con[1]), 30) +
-                              comp(man[0] + "," + str(20*man[1] if self.sg else 40*man[1]), 30))
+                              comp(con[0] + "," + str(40*con[1]), 30) +
+                              comp(man[0] + "," + str(40*man[1]), 30))
 
                 elif len(q_list) == 2:
-                    print(comp("計算 Cosine 相似度", 30)+comp("B是A的搭配詞信心值", 30)+comp("A是B的搭配詞信心值", 30))
+                    print(comp("計算 Cosine 相似度", 30)+comp("B是A的鄰近詞信心值", 30)+comp("A是B的鄰近詞信心值", 30))
                     res = self.model[self.sg].similarity(q_list[0], q_list[1])
                     res1 = self.test_collocation(q_list[0], q_list[1])
                     res2 = self.test_collocation(q_list[1], q_list[0])
                     print(comp(str(res), 30) +
-                          comp(str(20*res1 if self.sg else 40*res1), 30) +
-                          comp(str(20*res2 if self.sg else 40*res2), 30))
+                          comp(str(40*res1), 30) +
+                          comp(str(40*res2), 30))
 
                 elif len(q_list) == 3:
                     print("%s to %s == %s to ?" %
