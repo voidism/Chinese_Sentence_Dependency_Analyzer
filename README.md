@@ -125,6 +125,9 @@ _Input "sg" or "cbow" to switch between the CBOW and Skip-gram model._
 - Yahoo News
 - CNA News (main)
 
+## Online Training with your corpus
+- call `Model.online_training(filename="corpus_filename")`
+- corpus format: document with words segmented by space.
 
 *************************************************************************
 Author: Yung-Sung Chuang 2018/07/27 @ IIS  Academia Sinica           
