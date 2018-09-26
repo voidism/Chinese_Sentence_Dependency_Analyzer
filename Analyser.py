@@ -157,6 +157,17 @@ class Model():
         self.texfile.write(r"\end{document}")
         self.texfile.close()
 
+    def re_training(self, filename="MLcorpus.txt"):
+        logging.basicConfig(
+            format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+        for sg, modelname in zip([0,1], ['CBOW/word2vec.model', 'skip-gram/word2vec.model']):
+            # model = models.Word2Vec.load(modelname)
+            sentences = models.word2vec.LineSentence(filename)
+            new_model = word2vec.Word2Vec(sentences, size=100, iter=100,
+                              window=7, workers=4, min_count=4, sg=sg)
+            new_model.save(modelname)
+        self.model = [models.Word2Vec.load('CBOW/word2vec.model'),models.Word2Vec.load('skip-gram/word2vec.model')]
+
     def online_training(self, filename="MLcorpus.txt"):
         logging.basicConfig(
             format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
