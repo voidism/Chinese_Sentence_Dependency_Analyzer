@@ -1,4 +1,4 @@
-Chinese Sentence Dependency Analyser
+Chinese Sentence Dependency Analyzer
 ===
 Welcome to Dependency Analysis Machine!
 
